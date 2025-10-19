@@ -1,0 +1,37 @@
+---
+- name: Base tools on all nodes
+  hosts: master,worker
+  become: true
+  vars_files:
+    - vars/cluster_vars.yml
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      apt:
+        name:
+          - vim
+          - htop
+          - curl
+          - git
+          - net-tools
+          - python3-pip
+        state: present
+
+    - name: Ensure cgroup settings for K3s (Raspberry Pi OS/Debian)
+      lineinfile:
+        path: /boot/cmdline.txt
+        backrefs: yes
+        regexp: '^(.*)$'
+        line: '\1 cgroup_memory=1 cgroup_enable=memory'
+      notify: Reboot if cmdline changed
+      when: ansible_facts['os_family'] == 'Debian'
+
+  handlers:
+    - name: Reboot if cmdline changed
+      reboot:
+        msg: "Reboot required to enable cgroups"
+        reboot_timeout: 600

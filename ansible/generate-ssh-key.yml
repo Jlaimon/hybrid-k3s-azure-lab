@@ -1,0 +1,25 @@
+---
+- name: Generate SSH key pair for a student
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    student_name: "student1"
+    dest_dir: "./generated_keys"
+  tasks:
+    - name: Ensure destination directory exists
+      file:
+        path: "{{ dest_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Generate key with ssh-keygen
+      command: ssh-keygen -t rsa -b 2048 -N "" -f "{{ dest_dir }}/{{ student_name }}"
+      args:
+        creates: "{{ dest_dir }}/{{ student_name }}"
+
+    - name: Show paths
+      debug:
+        msg: |
+          Private key: {{ dest_dir }}/{{ student_name }}
+          Public key : {{ dest_dir }}/{{ student_name }}.pub

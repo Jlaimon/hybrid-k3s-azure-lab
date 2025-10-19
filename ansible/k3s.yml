@@ -1,0 +1,52 @@
+---
+- name: Install K3s server on master
+  hosts: master
+  become: true
+  vars_files:
+    - vars/cluster_vars.yml
+  tasks:
+    - name: Install K3s server
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --write-kubeconfig-mode 644" sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Ensure k3s service is running
+      service:
+        name: k3s
+        state: started
+        enabled: yes
+
+    - name: Read generated node token if not provided
+      command: cat /var/lib/rancher/k3s/server/node-token
+      register: node_token
+      changed_when: false
+
+    - name: Set fact k3s_token
+      set_fact:
+        effective_k3s_token: "{{ (k3s_token | length > 0) | ternary(k3s_token, node_token.stdout | trim) }}"
+
+    - name: Debug token (masked)
+      debug:
+        msg: "K3s token length = {{ effective_k3s_token | length }}"
+
+- name: Install K3s agent on workers
+  hosts: worker
+  become: true
+  vars_files:
+    - vars/cluster_vars.yml
+  vars:
+    master_ip: "{{ hostvars[groups['master'][0]]['ansible_host'] | default(groups['master'][0]) }}"
+    token_from_master: "{{ hostvars[groups['master'][0]]['effective_k3s_token'] }}"
+  tasks:
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_URL="https://{{ master_ip }}:6443" K3S_TOKEN="{{ token_from_master }}" sh -
+      args:
+        creates: /usr/local/bin/k3s-agent
+
+    - name: Ensure k3s-agent service is running
+      service:
+        name: k3s-agent
+        state: started
+        enabled: yes

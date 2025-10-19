@@ -1,0 +1,32 @@
+---
+- name: Add a new student user to Jump Host and authorize SSH key
+  hosts: jump-host
+  become: true
+  vars:
+    student_name: "student1"
+    student_pubkey_path: "./generated_keys/student1.pub"
+  tasks:
+    - name: Create user
+      user:
+        name: "{{ student_name }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Create .ssh directory
+      file:
+        path: "/home/{{ student_name }}/.ssh"
+        state: directory
+        owner: "{{ student_name }}"
+        group: "{{ student_name }}"
+        mode: '0700'
+
+    - name: Read public key
+      slurp:
+        src: "{{ student_pubkey_path }}"
+      register: pubkey
+
+    - name: Add authorized_key
+      authorized_key:
+        user: "{{ student_name }}"
+        state: present
+        key: "{{ pubkey.content | b64decode }}"

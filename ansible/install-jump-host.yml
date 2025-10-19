@@ -1,0 +1,78 @@
+---
+- name: Provision Azure Jump Host VM
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/cluster_vars.yml
+  vars:
+    vm_name: "jump-host"
+    vm_size: "Standard_B1s"
+    admin_username: "azureuser"
+    ssh_pubkey_path: "~/.ssh/id_rsa.pub"
+    vnet_name: "jump-vnet"
+    subnet_name: "jump-subnet"
+    nsg_name: "jump-nsg"
+    nic_name: "jump-nic"
+    ip_name: "jump-ip"
+    image: "Ubuntu2204"
+  tasks:
+    - name: Ensure Azure CLI installed
+      command: az version
+      register: azver
+      failed_when: azver.rc != 0
+
+    - name: Login SP or device
+      shell: |
+        if [ "{{ use_device_login }}" = "true" ]; then
+          az login --use-device-code
+        else
+          az login --service-principal -u "{{ azure_client_id }}" -p "{{ azure_client_secret }}" --tenant "{{ azure_tenant_id }}"
+        fi
+
+    - name: Set subscription
+      command: az account set --subscription "{{ azure_subscription_id }}"
+
+    - name: Create resource group
+      command: az group create --name "{{ azure_resource_group }}" --location "{{ azure_location }}"
+
+    - name: Create public IP
+      command: az network public-ip create --resource-group "{{ azure_resource_group }}" --name "{{ ip_name }}" --sku Basic --allocation-method Static
+
+    - name: Create VNet and subnet
+      command: az network vnet create --resource-group "{{ azure_resource_group }}" --name "{{ vnet_name }}" --address-prefix 10.0.0.0/16 --subnet-name "{{ subnet_name }}" --subnet-prefix 10.0.0.0/24
+
+    - name: Create NSG
+      command: az network nsg create --resource-group "{{ azure_resource_group }}" --name "{{ nsg_name }}"
+
+    - name: Allow SSH in NSG
+      command: az network nsg rule create --resource-group "{{ azure_resource_group }}" --nsg-name "{{ nsg_name }}" --name allow-ssh --priority 1000 --destination-port-ranges 22 --protocol Tcp --access Allow --direction Inbound
+
+    - name: Create NIC
+      command: >
+        az network nic create
+        --resource-group "{{ azure_resource_group }}"
+        --name "{{ nic_name }}"
+        --vnet-name "{{ vnet_name }}"
+        --subnet "{{ subnet_name }}"
+        --network-security-group "{{ nsg_name }}"
+        --public-ip-address "{{ ip_name }}"
+
+    - name: Create VM
+      command: >
+        az vm create
+        --resource-group "{{ azure_resource_group }}"
+        --name "{{ vm_name }}"
+        --image "{{ image }}"
+        --size "{{ vm_size }}"
+        --admin-username "{{ admin_username }}"
+        --nics "{{ nic_name }}"
+        --ssh-key-values "{{ ssh_pubkey_path }}"
+
+    - name: Output public IP
+      command: az vm list-ip-addresses --name "{{ vm_name }}" --resource-group "{{ azure_resource_group }}" --query "[0].virtualMachine.network.publicIpAddresses[0].ipAddress" -o tsv
+      register: ip_out
+
+    - name: Display public IP
+      debug:
+        msg: "Jump Host public IP: {{ ip_out.stdout }}"

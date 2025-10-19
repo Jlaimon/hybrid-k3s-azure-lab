@@ -1,0 +1,47 @@
+---
+- name: Connect local K3s cluster to Azure Arc
+  hosts: master
+  become: true
+  vars_files:
+    - vars/cluster_vars.yml
+  tasks:
+    - name: Install dependencies for Azure CLI
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - apt-transport-https
+          - lsb-release
+          - gnupg
+        state: present
+        update_cache: yes
+
+    - name: Install Azure CLI
+      shell: |
+        curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+      args:
+        creates: /usr/bin/az
+
+    - name: Add connectedk8s extension
+      command: az extension add --name connectedk8s
+      register: add_ext
+      changed_when: "'already installed' not in add_ext.stdout | default('')"
+
+    - name: Azure login with Service Principal (if configured)
+      shell: |
+        az login --service-principal           -u "{{ azure_client_id }}"           -p "{{ azure_client_secret }}"           --tenant "{{ azure_tenant_id }}"
+      when: not use_device_login | bool
+
+    - name: Azure device login (fallback/manual)
+      command: az login --use-device-code
+      when: use_device_login | bool
+
+    - name: Set subscription
+      command: az account set --subscription "{{ azure_subscription_id }}"
+
+    - name: Create resource group (idempotent)
+      command: az group create --name "{{ azure_resource_group }}" --location "{{ azure_location }}"
+
+    - name: Connect the cluster to Azure Arc
+      shell: |
+        az connectedk8s connect           --name "{{ azure_arc_cluster_name }}"           --resource-group "{{ azure_resource_group }}"           --location "{{ azure_location }}"           --kube-config "{{ kubeconfig_path }}"

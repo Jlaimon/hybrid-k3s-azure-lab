@@ -1,0 +1,23 @@
+# Cluster/global variables
+
+# === K3s ===
+k3s_server_ip: 192.168.137.11
+k3s_api_endpoint: "https://192.168.137.11:6443"
+# Set your own secure token or leave empty to auto-generate on first run (server will write to /var/lib/rancher/k3s/server/node-token)
+k3s_token: ""
+
+# === Azure Arc (Kubernetes) ===
+azure_subscription_id: "<YOUR_SUBSCRIPTION_ID>"
+azure_tenant_id: "<YOUR_TENANT_ID>"
+azure_client_id: "<YOUR_APP_CLIENT_ID>"         # Service Principal (App registration)
+azure_client_secret: "<YOUR_APP_CLIENT_SECRET>"  # Service Principal secret
+
+azure_location: "eastus"
+azure_resource_group: "ArcResourceGroup"
+azure_arc_cluster_name: "pi-cluster"
+
+# If you prefer device login instead of SPN, set use_device_login: true
+use_device_login: false
+
+# Path to kubeconfig on master after K3s install
+kubeconfig_path: "/etc/rancher/k3s/k3s.yaml"
