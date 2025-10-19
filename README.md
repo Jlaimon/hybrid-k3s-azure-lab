@@ -70,7 +70,7 @@ LICENSE
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 # 0) Install Ansible on the master Pi (192.168.137.11)
