@@ -1,11 +1,5 @@
 #  Hybrid Cloud Education Lab using DeskPi Super6C and Azure Arc
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20CM4-orange)
-![Automation](https://img.shields.io/badge/Automation-Ansible-green)
-![Cloud](https://img.shields.io/badge/Cloud-Microsoft%20Azure-0078D4)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-blue)
-![Status](https://img.shields.io/badge/Status-Ready-green)
 
 ###  Bachelor Project – Faculty of Electrical Engineering and Informatics  
 **Technical University of Košice (FEI TUKE)**  
