@@ -107,7 +107,3 @@ ansible-playbook -i ansible/hosts.ini ansible/add-student-user.yml -e student_na
 - Access to the cluster goes through the Azure Jump Host (NSG-restricted).
 - K3s join token is kept on the master and used for worker enrollment.
 
----
-
-##  License
-MIT — see [LICENSE](LICENSE).
